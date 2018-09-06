@@ -1,0 +1,413 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Rust SIMD Performance Guide</title>
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="This book describes how to write performant SIMD code in Rust.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800" rel="stylesheet" type="text/css">
+        <link href="https://fonts.googleapis.com/css?family=Source+Code+Pro:500" rel="stylesheet" type="text/css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        
+        <link rel="stylesheet" href="./src/ascii.css">
+        
+
+        
+    </head>
+    <body class="light">
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">var path_to_root = "";</script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { } 
+            if (theme === null || theme === undefined) { theme = 'light'; }
+            document.body.className = theme;
+            document.querySelector('html').className = theme + ' js';
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <ol class="chapter"><li class="affix"><a href="introduction.html">Introduction</a></li><li><a href="float-math/fp.html"><strong aria-hidden="true">1.</strong> Floating-point Math</a></li><li><ol class="section"><li><a href="float-math/svml.html"><strong aria-hidden="true">1.1.</strong> Short-vector Math Library</a></li><li><a href="float-math/approx.html"><strong aria-hidden="true">1.2.</strong> Approximate functions</a></li><li><a href="float-math/fma.html"><strong aria-hidden="true">1.3.</strong> Fused multiply-accumulate</a></li></ol></li><li><a href="target-feature/features.html"><strong aria-hidden="true">2.</strong> Target features</a></li><li><ol class="section"><li><a href="target-feature/rustflags.html"><strong aria-hidden="true">2.1.</strong> Using RUSTFLAGS</a></li><li><a href="target-feature/attribute.html"><strong aria-hidden="true">2.2.</strong> Using the target_feature attribute</a></li><li><a href="target-feature/inlining.html"><strong aria-hidden="true">2.3.</strong> Interaction with inlining</a></li><li><a href="target-feature/runtime.html"><strong aria-hidden="true">2.4.</strong> Detecting features at runtime</a></li></ol></li><li><a href="bound_checks.html"><strong aria-hidden="true">3.</strong> Bounds checking</a></li><li><a href="vert-hor-ops.html"><strong aria-hidden="true">4.</strong> Vertical and horizontal operations</a></li></ol>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                
+                <div id="menu-bar" class="menu-bar">
+                    <div id="menu-bar-sticky-container">
+                        <div class="left-buttons">
+                            <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                                <i class="fa fa-bars"></i>
+                            </button>
+                            <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                                <i class="fa fa-paint-brush"></i>
+                            </button>
+                            <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                                <li role="none"><button role="menuitem" class="theme" id="light">Light <span class="default">(default)</span></button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                            </ul>
+                            
+                            <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                                <i class="fa fa-search"></i>
+                            </button>
+                            
+                        </div>
+
+                        <h1 class="menu-title">Rust SIMD Performance Guide</h1> 
+
+                        <div class="right-buttons">
+                            <a href="print.html" title="Print this book" aria-label="Print this book">
+                                <i id="print-button" class="fa fa-print"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" name="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <a class="header" href="#introduction" id="introduction"><h1>Introduction</h1></a>
+<a class="header" href="#what-is-simd" id="what-is-simd"><h2>What is SIMD</h2></a>
+<!-- TODO:
+describe what SIMD is, which algorithms can benefit from it,
+give usage examples
+-->
+<a class="header" href="#history-of-simd-in-rust" id="history-of-simd-in-rust"><h2>History of SIMD in Rust</h2></a>
+<!-- TODO:
+discuss history of unstable std::simd,
+stabilization of std::arch, etc.
+-->
+<a class="header" href="#discover-packed_simd" id="discover-packed_simd"><h2>Discover packed_simd</h2></a>
+<!-- TODO: describe scope of this project -->
+<p>Writing fast and portable SIMD algorithms using <code>packed_simd</code> is, unfortunately,
+not trivial. There are many pitfals that one should be aware of, and some idioms
+that help avoid those pitfalls.</p>
+<p>This book attempts to document these best practices and provides practical examples
+on how to apply the tips to <em>your</em> code.</p>
+<a class="header" href="#floating-point-math" id="floating-point-math"><h1>Floating-point math</h1></a>
+<p>This chapter contains information pertaining to working with floating-point numbers.</p>
+<a class="header" href="#short-vector-math-library" id="short-vector-math-library"><h1>Short Vector Math Library</h1></a>
+<!-- TODO:
+Explain how is short-vector math performed by default (just scalarized libm calls).
+<p>Explain how to enable <code>sleef</code>, etc.
+--&gt;</p>
+<a class="header" href="#approximate-functions" id="approximate-functions"><h1>Approximate functions</h1></a>
+<!-- TODO:
+<p>Explain that they exists, that they are often <em>much</em> faster, how to use them,
+that people should check whether the error is good enough for their
+applications. Explain that this error is currently unstable and might change.
+--&gt;</p>
+<a class="header" href="#fused-multiply-add" id="fused-multiply-add"><h1>Fused Multiply Add</h1></a>
+<!-- TODO:
+Explain that this is a compound operation, infinite precision, difference
+between `mul_add` and `mul_adde`, that LLVM cannot do this by itself, etc.
+-->
+<a class="header" href="#enabling-target-features" id="enabling-target-features"><h1>Enabling target features</h1></a>
+<p>Not all processors of a certain architecture will have SIMD processing units,
+and using a SIMD instruction which is not supported will trigger undefined behavior.</p>
+<p>To allow building safe, portable programs, the Rust compiler will <strong>not</strong>, by default,
+generate any sort of vector instructions, unless it can statically determine
+they are supported. For example, on AMD64, SSE2 support is architecturally guaranteed.
+The <code>x86_64-apple-darwin</code> target enables up to SSSE3. The get a defintive list of
+which features are enabled by default on various platforms, refer to the target
+specifications <a href="https://github.com/rust-lang/rust/tree/master/src/librustc_target/spec">in the compiler's source code</a>.</p>
+<a class="header" href="#using-rustflags" id="using-rustflags"><h1>Using RUSTFLAGS</h1></a>
+<p>One of the easiest ways to benefit from SIMD is to allow the compiler
+to generate code using certain vector instruction extensions.</p>
+<p>The environment variable <code>RUSTFLAGS</code> can be used to pass options for code
+generation to the Rust compiler. These flags will affect <strong>all</strong> compiled crates.</p>
+<p>There are two flags which can be used to enable specific vector extensions:</p>
+<a class="header" href="#target-feature" id="target-feature"><h2>target-feature</h2></a>
+<ul>
+<li>
+<p>Syntax: <code>-C target-feature=&lt;features&gt;</code></p>
+</li>
+<li>
+<p>Provides the compiler with a comma-separated set of instruction extensions
+to enable.</p>
+<p><strong>Example</strong>: Use <code>-C target-features=+sse3,+avx</code> to enable generating instructions
+for <a href="https://en.wikipedia.org/wiki/SSE3">Streaming SIMD Extensions 3</a> and
+<a href="https://en.wikipedia.org/wiki/Advanced_Vector_Extensions">Advanced Vector Extensions</a>.</p>
+</li>
+<li>
+<p>To list target triples for all targets supported by Rust, use:</p>
+<pre><code class="language-sh">rustc --print target-list
+</code></pre>
+</li>
+<li>
+<p>To list all support target features for a certain target triple, use:</p>
+<pre><code class="language-sh">rustc --target=${TRIPLE} --print target-features
+</code></pre>
+</li>
+<li>
+<p>Note that all CPU features are independent, and will have to be enabled individually.</p>
+<p><strong>Example</strong>: Setting <code>-C target-features=+avx2</code> will <em>not</em> enable <code>fma</code>, even though
+all CPUs which support AVX2 also support FMA. To enable both, one has to use
+<code>-C target-features=+avx2,+fma</code></p>
+</li>
+<li>
+<p>Some features also depend on other features, which need to be enabled for the
+target instructions to be generated.</p>
+<p><strong>Example</strong>: Unless <code>v7</code> is specified as the target CPU (see below), to enable
+NEON on ARM it is necessary to use <code>-C target-feature=+v7,+neon</code>.</p>
+</li>
+</ul>
+<a class="header" href="#target-cpu" id="target-cpu"><h2>target-cpu</h2></a>
+<ul>
+<li>
+<p>Syntax: <code>-C target-cpu=&lt;cpu&gt;</code></p>
+</li>
+<li>
+<p>Sets the identifier of a CPU family / model for which to build and optimize the code.</p>
+<p><strong>Example</strong>: <code>RUSTFLAGS='-C target-cpu=cortex-a75'</code></p>
+</li>
+<li>
+<p>To list all supported target CPUs for a certain target triple, use:</p>
+<pre><code class="language-sh">rustc --target=${TRIPLE} --print target-cpus
+</code></pre>
+<p><strong>Example</strong>:</p>
+<pre><code class="language-sh">rustc --target=i686-pc-windows-msvc --print target-cpus
+</code></pre>
+</li>
+<li>
+<p>The compiler will translate this into a list of target features. Therefore,
+individual feature checks (<code>#[cfg(target_feature = &quot;...&quot;)]</code>) will still
+work properly.</p>
+</li>
+<li>
+<p>It will cause the code generator to optimize the generated code for that
+specific CPU model.</p>
+</li>
+<li>
+<p>Using <code>native</code> as the CPU model will cause Rust to generate and optimize code
+for the CPU running the compiler. It is useful when building programs which you
+plan to only use locally. This should never be used when the generated programs
+are meant to be run on other computers, such as when packaging for distribution
+or cross-compiling.</p>
+</li>
+</ul>
+<a class="header" href="#the-target_feature-attribute" id="the-target_feature-attribute"><h1>The <code>target_feature</code> attribute</h1></a>
+<!-- TODO:
+Explain the `#[target_feature]` attribute
+-->
+<a class="header" href="#inlining" id="inlining"><h1>Inlining</h1></a>
+<!-- TODO:
+Explain how the `#[target_feature]` attribute interacts with inlining
+-->
+<a class="header" href="#detecting-host-features-at-runtime" id="detecting-host-features-at-runtime"><h1>Detecting host features at runtime</h1></a>
+<!-- TODO:
+Explain cost (how it works).
+-->
+<a class="header" href="#bounds-checking" id="bounds-checking"><h1>Bounds checking</h1></a>
+<p>Reading and writing packed vectors to/from slices is checked by default.
+Independently of the configuration options used, the safe functions:</p>
+<ul>
+<li><code>Simd&lt;[T; N]&gt;::from_slice_aligned(&amp; s[..])</code></li>
+<li><code>Simd&lt;[T; N]&gt;::write_to_slice_aligned(&amp;mut s[..])</code></li>
+</ul>
+<p>always check that:</p>
+<ul>
+<li>the slice is big enough to hold the vector</li>
+<li>the slice is suitably aligned to perform an aligned load/store for a <code>Simd&lt;[T; N]&gt;</code> (this alignment is often much larger than that of <code>T</code>).</li>
+</ul>
+<p>There are <code>_unaligned</code> versions that use unaligned load and stores, as well as
+<code>unsafe</code> <code>_unchecked</code> that do not perform any checks iff <code>debug-assertions = false</code> / <code>debug = false</code>. That is, the <code>_unchecked</code> methods do still assert size
+and alignment in debug builds and could also do so in release builds depending
+on the configuration options.</p>
+<p>These assertions do often significantly impact performance and you should be
+aware of them.</p>
+<a class="header" href="#vertical-and-horizontal-operations" id="vertical-and-horizontal-operations"><h1>Vertical and horizontal operations</h1></a>
+<p>In SIMD terminology, each vector has a certain &quot;width&quot; (number of lanes).
+A vector processor is able to perform two kinds of operations on a vector:</p>
+<ul>
+<li>Vertical operations:
+operate on two vectors of the same width, result has same width</li>
+</ul>
+<p><strong>Example</strong>: vertical addition of two <code>f32x4</code> vectors</p>
+<pre><code>  %0     == | 2 | -3.5 |  0 | 7 |
+              +     +     +   +
+  %1     == | 4 |  1.5 | -1 | 0 |
+              =     =     =   =
+%0 + %1  == | 6 |  -2  | -1 | 7 |
+</code></pre>
+<ul>
+<li>Horizontal operations:
+reduce the elements of two vectors in some way,
+the result's elements combine information from the two original ones</li>
+</ul>
+<p><strong>Example</strong>: horizontal addition of two <code>u64x2</code> vectors</p>
+<pre><code>  %0     == | 1 |  3 |
+              └─+───┘
+                └───────┐
+                        │
+  %1     == | 4 | -1 |  │
+              └─+──┘    │
+                └───┐   │
+                    │   │
+              ┌─────│───┘
+              ▼     ▼
+%0 + %1  == | 4 |   3 |
+</code></pre>
+<a class="header" href="#performance-consideration-of-horizontal-operations" id="performance-consideration-of-horizontal-operations"><h2>Performance consideration of horizontal operations</h2></a>
+<p>The result of vertical operations, like vector negation: <code>-a</code>, for a given lane,
+does not depend on the result of the operation for the other lanes. The result
+of horizontal operations, like the vector <code>sum</code> reduction: <code>a.sum()</code>, depends on
+the value of all vector lanes.</p>
+<p>In virtually all architectures vertical operations are fast, while horizontal
+operations are, by comparison, very slow.</p>
+<p>Consider the following two functions for computing the sum of all <code>f32</code> values
+in a slice:</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+fn fast_sum(x: &amp;[f32]) -&gt; f32 {
+    assert!(x.len() % 4 == 0);
+    let mut sum = f32x4::splat(0.); // [0., 0., 0., 0.]
+    for i in (0..x.len()).step_by(4) {
+        sum += f32x4::from_slice_unaligned(&amp;x[i..]);
+    }
+    sum.sum()
+}
+
+fn slow_sum(x: &amp;[f32]) -&gt; f32 {
+    assert!(x.len() % 4 == 0);
+    let mut sum: f32 = 0.;
+    for i in (0..x.len()).step_by(4) {
+        sum += f32x4::from_slice_unaligned(&amp;x[i..]).sum();
+    }
+    sum
+}
+#}</code></pre></pre>
+<p>The inner loop over the slice is where the bulk of the work actually happens.
+There, the <code>fast_sum</code> function perform vertical operations into a vector, doing
+a single horizontal reduction at the end, while the <code>slow_sum</code> function performs
+horizontal vector operations inside of the loop.</p>
+<p>On all widely-used architectures, <code>fast_sum</code> is a large constant factor faster
+than <code>slow_sum</code>. You can run the <a href="">slice_sum</a> example and see for yourself. On
+the particular machine tested there the algorithm using the horizontal vector
+addition is 2.7x slower than the one using vertical vector operations!</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                        
+
+                        
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                
+
+                
+            </nav>
+
+        </div>
+
+        
+
+        
+
+        
+
+        
+        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
+        
+
+        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+        
+
+        
+        
+        <script type="text/javascript">
+        window.addEventListener('load', function() {
+            window.setTimeout(window.print, 100);
+        });
+        </script>
+        
+        
+
+    </body>
+</html>
